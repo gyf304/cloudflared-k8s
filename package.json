@@ -1,6 +1,6 @@
 {
   "name": "cloudflared-k8s",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.5",
   "main": "index.js",
   "author": "Yifan Gu",
   "license": "MIT",
@@ -9,6 +9,14 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.16.3",
+    "fast-json-stable-stringify": "^2.1.0",
     "zod": "^3.14.4"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build-docker-native": "docker buildx build --tag gyf304/cloudflared-k8s:$npm_package_version .",
+    "build-docker": "docker buildx build --platform linux/arm64/v8,linux/amd64 --tag gyf304/cloudflared-k8s:$npm_package_version .",
+    "push-docker": "yarn build-docker --push",
+    "push-chart": "./scripts/update-helm-repo.sh"
   }
 }

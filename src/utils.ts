@@ -1,46 +1,45 @@
 import * as k8s from "@kubernetes/client-node";
 import * as zod from "zod";
 
-export function upperSnakecaseToCamelcase(str: string): string {
+function upperSnakecaseToCamelcase(str: string): string {
 	return str.toLowerCase().replace(/_([a-z])/g, (_, match) => match.toUpperCase());
 }
 
+function camelCaseToUpperSnakeCase(str: string): string {
+	const out = str.replace(/([a-z])([A-Z])/g, (_, match1, match2) => `${match1}_${match2}`);
+	return out.toUpperCase();
+}
+
 const envSchema = zod.object({
-	cloudflaredCredentials: zod.string(),
+	tunnel: zod.string(),
+	ingressService: zod.optional(zod.string()),
+	interval: zod
+		.string()
+		.refine((s) => !isNaN(parseInt(s, 10)), "must be a number")
+		.default("10000"),
 });
 
-const tokenSchema = zod.object({
-	AccountTag: zod.optional(zod.string()),
-	TunnelSecret: zod.optional(zod.string()),
-	TunnelID: zod.optional(zod.string()),
-	TunnelName: zod.optional(zod.string()),
-	a: zod.optional(zod.string()),
-	t: zod.optional(zod.string()),
-	s: zod.optional(zod.string()),
-});
-
-type Token = zod.TypeOf<typeof tokenSchema>;
-
-export function getToken(): Token {
-	const env = envSchema.parse(Object.fromEntries(
-		Object.entries(process.env)
-			.filter(([key]) => key.startsWith("CLOUDFLARED_"))
-			.map(([key, value]) => [upperSnakecaseToCamelcase(key), value])
-	));
-	const tokenString = env.cloudflaredCredentials;
-	let token: unknown;
-	if (tokenString.startsWith("{")) {
-		token = JSON.parse(tokenString);
-	} else if (tokenString.startsWith("e")) {
-		token = JSON.parse(Buffer.from(tokenString, "base64").toString());
+export function getEnv() {
+	const prefix = "CLOUDFLARED_";
+	try {
+		const env = envSchema.parse(Object.fromEntries(
+			Object.entries(process.env)
+				.filter(([key]) => key.startsWith(prefix))
+				.map(([key, value]) => [key.substring(prefix.length), value] as const)
+				.map(([key, value]) => [upperSnakecaseToCamelcase(key), value])
+		));
+		return env;
+	} catch (e) {
+		if (e instanceof zod.ZodError) {
+			throw new Error(`Issue with environment variable ${prefix}${
+				camelCaseToUpperSnakeCase(e.issues[0].path[0] as string)
+			}: ${e.issues[0].message}`);
+		}
+		throw e;
 	}
-
-	return tokenSchema.parse(token);
 }
 
 const configSchema = zod.object({
-	tunnel: zod.string(),
-	"credentials-file": zod.string(),
 	ingress: zod.array(zod.object({
 		hostname: zod.optional(zod.string()),
 		service: zod.string(),
@@ -51,10 +50,8 @@ const configSchema = zod.object({
 export type Config = zod.TypeOf<typeof configSchema>;
 
 export function generateConfig(ingresses: k8s.V1IngressList): Config {
-	const token = getToken();
+	const env = getEnv();
 	const config: Config = {
-		tunnel: token.t ?? token.TunnelID ?? "",
-		"credentials-file": "credentials.json",
 		ingress: [],
 	};
 	for (const ingress of ingresses.items) {
@@ -62,18 +59,34 @@ export function generateConfig(ingresses: k8s.V1IngressList): Config {
 		if (lbIngersses.length === 0) {
 			continue;
 		}
-		let host = lbIngersses[0].hostname ?? lbIngersses[0].ip;
-		if (host === undefined) {
-			continue;
+		let service = env.ingressService;
+
+		if (service === undefined) {
+			const host = lbIngersses[0].hostname ?? lbIngersses[0].ip;
+			const port = lbIngersses[0].ports?.[0] ?? 80;
+			if (typeof port === "number" && (port === 80 || port === 443)) {
+				service = `${port === 80 ? "http" : "https"}://${host}:${port}`;
+			} else if (typeof port === "object") {
+				service = `${port.protocol}://${host}:${port.port}`;
+			} else {
+				throw new Error(`Cannot get service for ingress ${ingress.metadata?.name}`);
+			}
 		}
 
 		const rules = ingress.spec?.rules ?? [];
-		const service = ingress.spec.rules[0].http.paths[0].backend.serviceName;
-		const path = ingress.spec.rules[0].http.paths[0].path;
-		config.ingress.push({
-			hostname,
-			service,
-			path,
-		});
+		for (const rule of rules) {
+			const hostname = rule.host;
+			if (hostname === undefined) {
+				continue;
+			}
+			config.ingress.push({
+				hostname,
+				service,
+			});
+		}
 	}
+	config.ingress.push({
+		service: "http_status:404",
+	});
+	return config;
 }

@@ -1,0 +1,7 @@
+dist
+node_modules
+Dockerfile
+.dockerignore
+/scripts
+/chart
+tmp
