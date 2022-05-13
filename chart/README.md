@@ -1,6 +1,8 @@
 # Prerequisite
 
-You'll need a ingress controller installed on your k8s cluster
+You'll need a ingress controller installed on your k8s cluster.
+
+This installs a nginx-ingress with ClusterIP as the service type - so not exposed to outside of the cluster.
 
 ```
 helm upgrade --install ingress-nginx ingress-nginx \
@@ -68,7 +70,6 @@ helm upgrade \
   --namespace=cloudflared \
   --create-namespace \
   --repo=https://gyf304.github.io/helm \
-  --version=1.0.0-alpha.12 \
   cloudflared cloudflared \
   -f values.yaml \
   --set ingressService=http://ingress-nginx-controller.ingress-nginx # set this to the ingress-controller service of your cluster
