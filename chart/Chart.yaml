@@ -1,6 +1,8 @@
 apiVersion: v2
 name: cloudflared
-description: A Helm chart for Kubernetes
+description: |-
+  Automatically route traffic to your website through Cloudflare
+  Tunnel.
 type: application
-version: "1.0.0-alpha.11"
-appVersion: "1.0.0-alpha.5"
+version: "1.0.0"
+appVersion: "1.0.0"

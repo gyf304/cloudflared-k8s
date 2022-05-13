@@ -1,6 +1,6 @@
 {
   "name": "cloudflared-k8s",
-  "version": "1.0.0-alpha.5",
+  "version": "1.0.0",
   "main": "index.js",
   "author": "Yifan Gu",
   "license": "MIT",
