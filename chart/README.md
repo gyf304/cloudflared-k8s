@@ -8,7 +8,7 @@ Disclaimer: This is not a official integration.
 You'll need a ingress controller installed on your k8s cluster.
 
 The following command installs ingress-nginx using helm,
-and set the ingress service to ClusterIP so it's not exposed
+and set the ingress service to ClusterIP so it's not exposed.
 
 ```
 helm upgrade --install ingress-nginx ingress-nginx \
