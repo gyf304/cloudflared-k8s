@@ -4,6 +4,9 @@
 
 replicaCount: 2
 
+# set routeAllIngresses to false to not route all ingresses via cloudflared
+routeAllIngresses: true
+
 cloudflared:
   certificate: ""
   credentials: ""

@@ -13,11 +13,34 @@ function camelCaseToUpperSnakeCase(str: string): string {
 const envSchema = zod.object({
 	tunnel: zod.string(),
 	ingressService: zod.optional(zod.string()),
+	routeAllIngresses: zod.string().default("true").transform(parseBool),
 	interval: zod
 		.string()
-		.refine((s) => !isNaN(parseInt(s, 10)), "must be a number")
-		.default("10000"),
+		.default("10000")
+		.transform((s) => parseInt(s, 10)),
 });
+
+function parseBool(s: string, fallback?: boolean) {
+	switch (s.toLowerCase()) {
+		case "true":
+		case "yes":
+		case "1":
+		case "t":
+		case "y":
+			return true;
+		case "false":
+		case "no":
+		case "0":
+		case "f":
+		case "n":
+			return false;
+		default:
+			if (fallback !== undefined) {
+				return fallback;
+			}
+			throw new Error(`Cannot parse ${s} as boolean`)
+	}
+}
 
 export function getEnv() {
 	const prefix = "CLOUDFLARED_";
@@ -55,15 +78,24 @@ export function generateConfig(ingresses: k8s.V1IngressList): Config {
 		ingress: [],
 	};
 	for (const ingress of ingresses.items) {
-		const lbIngersses = ingress.status?.loadBalancer?.ingress ?? [];
-		if (lbIngersses.length === 0) {
+		let service = ingress.metadata?.annotations?.["cfargotunnel.com/tunnel-ingress-service"];
+		let enabledAnnotation = ingress.metadata?.annotations?.["cfargotunnel.com/enabled"];
+		let enabled = env.routeAllIngresses || service !== undefined;
+		if (enabledAnnotation !== undefined) {
+			enabled = parseBool(enabledAnnotation, false);
+		}
+
+		if (!enabled) {
 			continue;
 		}
-		let service = env.ingressService;
 
 		if (service === undefined) {
-			const host = lbIngersses[0].hostname ?? lbIngersses[0].ip;
-			const port = lbIngersses[0].ports?.[0] ?? 80;
+			const lbIngresses = ingress.status?.loadBalancer?.ingress ?? [];
+			if (lbIngresses.length === 0) {
+				continue;
+			}
+			const host = lbIngresses[0].hostname ?? lbIngresses[0].ip;
+			const port = lbIngresses[0].ports?.[0] ?? 80;
 			if (typeof port === "number" && (port === 80 || port === 443)) {
 				service = `${port === 80 ? "http" : "https"}://${host}:${port}`;
 			} else if (typeof port === "object") {

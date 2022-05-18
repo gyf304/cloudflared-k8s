@@ -51,7 +51,7 @@ async function sync(ingresses: k8s.V1IngressList) {
 
 async function main() {
 	const env = getEnv();
-	const interval = parseInt(env.interval);
+	const interval = env.interval;
 	const kc = new k8s.KubeConfig();
 	kc.loadFromDefault();
 	const k8sApi = kc.makeApiClient(k8s.NetworkingV1Api);

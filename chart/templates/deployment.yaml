@@ -35,7 +35,9 @@ spec:
             - name: TUNNEL_ORIGIN_CERT
               value: /etc/cloudflared/cert.pem
             - name: CLOUDFLARED_TUNNEL
-              value: {{ required "A valid .Values.cloudflared.tunnel entry required!" .Values.cloudflared.tunnel | quote }}
+              value: {{ required "A valid cloudflared.tunnel entry required!" .Values.cloudflared.tunnel | quote }}
+            - name: CLOUDFLARED_ROUTE_ALL_INGRESSES
+              value: {{ .Values.routeAllIngresses | quote }}
             - name: TUNNEL_CRED_FILE
               value: /etc/cloudflared/credentials.json
             {{- if .Values.ingressService }}

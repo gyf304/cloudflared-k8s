@@ -1,6 +1,14 @@
+Automatically route traffic to your k8s ingress through Cloudflare
+Tunnel. (Previously known as Cloudflare Argo Tunnel)
+
+Disclaimer: This is not a official integration.
+
 # Prerequisite
 
-You'll need a ingress controller installed on your k8s cluster
+You'll need a ingress controller installed on your k8s cluster.
+
+The following command installs ingress-nginx using helm,
+and set the ingress service to ClusterIP so it's not exposed
 
 ```
 helm upgrade --install ingress-nginx ingress-nginx \
@@ -15,12 +23,21 @@ helm upgrade --install ingress-nginx ingress-nginx \
 
 1. Download [`cloudflared`](https://github.com/cloudflare/cloudflared/releases)
 
-   You don't have to install it. You just need to `chmod +x ./cloudflared` so you can execute it.
+   You don't have to install it. You just need to `chmod +x ./cloudflared`
+   so you can execute it.
 
 2. Authenticate `cloudflared`
 
+Remove existing cloudflared configuration
+
 ```bash
-$ cloudflared tunnel login
+rm -rf ~/.cloudflared
+```
+
+Login to cloudflared
+
+```bash
+cloudflared tunnel login
 ```
 
 ```
@@ -68,8 +85,32 @@ helm upgrade \
   --namespace=cloudflared \
   --create-namespace \
   --repo=https://gyf304.github.io/helm \
-  --version=1.0.0-alpha.12 \
   cloudflared cloudflared \
   -f values.yaml \
   --set ingressService=http://ingress-nginx-controller.ingress-nginx # set this to the ingress-controller service of your cluster
 ```
+
+# Advanced Settings
+
+## Helm Values
+
+- `routeAllIngresses`
+
+  Set `routeAllIngress` value to `false` to prevent routing all ingress in
+  the cluster via cloudflared.
+
+  You can set `cfargotunnel.com/enabled` annotation on k8s `Ingress`
+  resource to `true` to explicitly route a ingress via cloudflared.
+
+## Annotations on Ingress
+
+- `cfargotunnel.com/enabled`
+
+  Can be set to `true` or `false` to explicitly enable or disable routing
+  of an ingress via cloudflared.
+
+- `cfargotunnel.com/tunnel-ingress-service`
+
+  Explicitly set a ingress to use a endpoint.
+  e.g. `http://ingress-nginx-controller.ingress-nginx`
+
