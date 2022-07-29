@@ -13,14 +13,14 @@ function camelCaseToUpperSnakeCase(str: string): string {
 const envSchema = zod.object({
 	tunnel: zod.string(),
 	ingressService: zod.optional(zod.string()),
-	routeAllIngresses: zod.string().default("true").transform(parseBool),
+	routeAllIngresses: zod.string().default("true").transform((s) => parseBool(s)),
 	interval: zod
 		.string()
 		.default("10000")
 		.transform((s) => parseInt(s, 10)),
 });
 
-function parseBool(s: string, fallback?: boolean) {
+function parseBool(s: string, fallback?: boolean): boolean {
 	switch (s.toLowerCase()) {
 		case "true":
 		case "yes":
