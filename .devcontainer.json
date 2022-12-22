@@ -1,0 +1,11 @@
+{
+  "customizations": {
+    "codespaces": {
+      "repositories": {
+        "gyf304/helm": {
+          "permissions": "write-all"
+        }
+      }
+    }
+  }
+}
