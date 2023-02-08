@@ -1,3 +1,8 @@
+# Deprecated
+Use the official managed tunnel instead.
+
+# Intro
+
 Automatically route traffic to your k8s ingress through Cloudflare
 Tunnel. (Previously known as Cloudflare Argo Tunnel)
 
